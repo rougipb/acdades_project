@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 
 class EditarHabitoScreen extends StatefulWidget {
   final String nombreActual;
-  final String colorActualNombre;
+  final int colorActualValue;
 
   const EditarHabitoScreen({
     super.key,
     required this.nombreActual,
-    required this.colorActualNombre,
+    required this.colorActualValue,
   });
 
   @override
@@ -16,9 +16,8 @@ class EditarHabitoScreen extends StatefulWidget {
 
 class _EditarHabitoScreenState extends State<EditarHabitoScreen> {
   late TextEditingController _nombreController;
-  late String _colorSeleccionadoNombre;
+  late int _colorSeleccionadoValue;
 
-  // Mapa para gestionar los colores según las pautas de la ficha
   final Map<String, Color> _opcionesColor = {
     'Azul': Colors.blue,
     'Verde': Colors.green,
@@ -28,9 +27,8 @@ class _EditarHabitoScreenState extends State<EditarHabitoScreen> {
   @override
   void initState() {
     super.initState();
-    // Inicializar el controlador con el nombre recibido
     _nombreController = TextEditingController(text: widget.nombreActual);
-    _colorSeleccionadoNombre = widget.colorActualNombre;
+    _colorSeleccionadoValue = widget.colorActualValue;
   }
 
   @override
@@ -43,28 +41,19 @@ class _EditarHabitoScreenState extends State<EditarHabitoScreen> {
     final nuevoNombre = _nombreController.text.trim();
     if (nuevoNombre.isEmpty) return;
 
-    // Retorna el resultado formateado
     Navigator.pop(context, {
       'nombre': nuevoNombre,
-      'colorNombre': _colorSeleccionadoNombre,
+      'colorValue': _colorSeleccionadoValue,
     });
-  }
-
-  void _cancelar() {
-    // Retorna null al cancelar
-    Navigator.pop(context, null);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Editar hábito'),
-      ),
-      body: SingleChildScrollView(
+      appBar: AppBar(title: const Text('Gestión de Hábito')),
+      body: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             TextField(
               controller: _nombreController,
@@ -73,57 +62,27 @@ class _EditarHabitoScreenState extends State<EditarHabitoScreen> {
                 border: OutlineInputBorder(),
               ),
             ),
-            const SizedBox(height: 25),
-            const Text(
-              'Selecciona un color:',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 15),
-            // Agrupar los botones de color en una Row
+            const SizedBox(height: 20),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: _opcionesColor.keys.map((nombreColor) {
-                final esSeleccionado = _colorSeleccionadoNombre == nombreColor;
+              children: _opcionesColor.entries.map((entry) {
+                final esSeleccionado = _colorSeleccionadoValue == entry.value.value;
                 return ChoiceChip(
-                  label: Text(nombreColor),
+                  label: Text(entry.key),
                   selected: esSeleccionado,
-                  selectedColor: _opcionesColor[nombreColor]?.withOpacity(0.4),
-                  avatar: CircleAvatar(
-                    backgroundColor: _opcionesColor[nombreColor],
-                  ),
+                  avatar: CircleAvatar(backgroundColor: entry.value),
                   onSelected: (bool selected) {
                     if (selected) {
-                      setState(() {
-                        _colorSeleccionadoNombre = nombreColor;
-                      });
+                      setState(() => _colorSeleccionadoValue = entry.value.value);
                     }
                   },
                 );
               }).toList(),
             ),
-            const SizedBox(height: 40),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: _cancelar,
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                    child: const Text('Cancelar'),
-                  ),
-                ),
-                const SizedBox(width: 15),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _guardar,
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                    child: const Text('Guardar'),
-                  ),
-                ),
-              ],
+            const SizedBox(height: 30),
+            ElevatedButton(
+              onPressed: _guardar,
+              child: const Text('Guardar Hábito'),
             ),
           ],
         ),

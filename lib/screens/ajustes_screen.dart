@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/preferencias_service.dart';
+import '../main.dart';
 import 'bienvenida_screen.dart';
 
 class AjustesScreen extends StatefulWidget {
@@ -34,9 +35,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Ajustes'),
-      ),
+      appBar: AppBar(title: const Text('Ajustes')),
       body: ListView(
         padding: const EdgeInsets.all(16.0),
         children: [
@@ -46,6 +45,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
             onChanged: (val) async {
               setState(() => _oscuro = val);
               await PreferenciasService.setModoOscuro(val);
+              if (mounted) HabitosApp.of(context)?.recargarAjustes();
             },
           ),
           const Divider(),
@@ -60,6 +60,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
               onChanged: (val) async {
                 setState(() => _tamano = val);
                 await PreferenciasService.setTamanoLetra(val);
+                if (mounted) HabitosApp.of(context)?.recargarAjustes();
               },
             ),
           ),
@@ -73,7 +74,6 @@ class _AjustesScreenState extends State<AjustesScreen> {
             },
           ),
           const Divider(),
-          const SizedBox(height: 20),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () async {
@@ -81,16 +81,10 @@ class _AjustesScreenState extends State<AjustesScreen> {
                 context: context,
                 builder: (ctx) => AlertDialog(
                   title: const Text('Borrar todos los datos'),
-                  content: const Text('¿Estás seguro? La app quedará como recién instalada.'),
+                  content: const Text('¿Estás seguro? La app se reiniciará por completo.'),
                   actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(ctx, false),
-                      child: const Text('Cancelar'),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.pop(ctx, true),
-                      child: const Text('Borrar', style: TextStyle(color: Colors.red)),
-                    ),
+                    TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+                    TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Borrar', style: TextStyle(color: Colors.red))),
                   ],
                 ),
               );
@@ -98,7 +92,11 @@ class _AjustesScreenState extends State<AjustesScreen> {
               if (confirmar == true) {
                 await PreferenciasService.borrarTodo();
                 if (mounted) {
-                  Navigator.pop(context);
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (_) => const BienvenidaScreen()),
+                        (route) => false,
+                  );
                 }
               }
             },

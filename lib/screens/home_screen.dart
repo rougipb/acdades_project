@@ -1,187 +1,197 @@
 import 'package:flutter/material.dart';
+import '../models/habito.dart';
+import '../services/preferencias_service.dart';
 import 'editar_habito_screen.dart';
 import 'estadisticas_screen.dart';
 import 'ajustes_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  final String nombreUsuario;
-  final int objetivoDiario;
-
-  const HomeScreen({
-    super.key,
-    required this.nombreUsuario,
-    required this.objetivoDiario,
-  });
+  const HomeScreen({super.key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // Datos del hábito de ejemplo en memoria
-  String _nombreHabito = 'Beber agua';
-  String _colorNombre = 'Azul';
-  bool _completadoHoy = false;
+  String _nombreUsuario = '';
+  int _objetivoDiario = 5;
+  List<Habito> _listaHabitos = [];
+  bool _ocultarCompletados = false;
+  bool _cargando = true;
 
-  final Map<String, Color> _mapaColores = {
-    'Azul': Colors.blue,
-    'Verde': Colors.green,
-    'Naranja': Colors.orange,
-  };
+  @override
+  void initState() {
+    super.initState();
+    _cargarDatos();
+  }
 
-  // Método para abrir el editor de hábito
-  Future<void> _abrirEditor() async {
+  Future<void> _cargarDatos() async {
+    final nombre = await PreferenciasService.getNombreUsuario() ?? 'Usuario';
+    final objetivo = await PreferenciasService.getObjetivoDiario();
+    final habitos = await PreferenciasService.getHabitos();
+    final ocultar = await PreferenciasService.getOcultarCompletados();
+
+    setState(() {
+      _nombreUsuario = nombre;
+      _objetivoDiario = objetivo;
+      _listaHabitos = habitos;
+      _ocultarCompletados = ocultar;
+      _cargando = false;
+    });
+  }
+
+  Future<void> _guardarYRecargar() async {
+    await PreferenciasService.guardarHabitos(_listaHabitos);
+    await _cargarDatos();
+  }
+
+  void _completarHabito(Habito habito, bool? valor) {
+    final hoyStr = DateTime.now().toIso8601String().split('T')[0];
+    setState(() {
+      if (valor == true) {
+        if (!habito.fechasCompletado.contains(hoyStr)) {
+          habito.fechasCompletado.add(hoyStr);
+        }
+      } else {
+        habito.fechasCompletado.remove(hoyStr);
+      }
+    });
+    _guardarYRecargar();
+  }
+
+  Future<void> _crearOEditarHabito([Habito? habitoExistente]) async {
     final resultado = await Navigator.push<Map<String, dynamic>>(
       context,
       MaterialPageRoute(
         builder: (context) => EditarHabitoScreen(
-          nombreActual: _nombreHabito,
-          colorActualNombre: _colorNombre,
+          nombreActual: habitoExistente?.nombre ?? '',
+          colorActualValue: habitoExistente?.colorValue ?? Colors.blue.value,
         ),
       ),
     );
 
-    if (!mounted) return;
+    if (!mounted || resultado == null) return;
 
-    if (resultado != null) {
-      setState(() {
-        _nombreHabito = resultado['nombre'] as String;
-        _colorNombre = resultado['colorNombre'] as String;
-      });
-    }
+    setState(() {
+      if (habitoExistente != null) {
+        // Editar hábito existente
+        habitoExistente.nombre = resultado['nombre'] as String;
+        habitoExistente.colorValue = resultado['colorValue'] as int;
+      } else {
+        // Crear nuevo hábito
+        final nuevoHabito = Habito(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          nombre: resultado['nombre'] as String,
+          colorValue: resultado['colorValue'] as int,
+        );
+        _listaHabitos.add(nuevoHabito);
+      }
+    });
+
+    _guardarYRecargar();
+  }
+
+  void _borrarHabito(String id) {
+    setState(() {
+      _listaHabitos.removeWhere((h) => h.id == id);
+    });
+    _guardarYRecargar();
   }
 
   @override
   Widget build(BuildContext context) {
-    final colorActual = _mapaColores[_colorNombre] ?? Colors.blue;
+    if (_cargando) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    final completadosHoy = _listaHabitos.where((h) => h.completadoHoy).length;
+    final habitosVisibles = _ocultarCompletados
+        ? _listaHabitos.where((h) => !h.completadoHoy).toList()
+        : _listaHabitos;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('HabitosApp - Principal'),
         actions: [
-          // Botón para ir a Estadísticas
           IconButton(
             icon: const Icon(Icons.bar_chart),
             tooltip: 'Estadísticas',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const EstadisticasScreen(),
-                ),
-              );
-            },
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const EstadisticasScreen()),
+            ).then((_) => _cargarDatos()),
           ),
-          // Botón para ir a Ajustes
           IconButton(
             icon: const Icon(Icons.settings),
             tooltip: 'Ajustes',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const AjustesScreen(),
-                ),
-              );
-            },
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AjustesScreen()),
+            ).then((_) => _cargarDatos()),
           ),
         ],
       ),
       body: Padding(
-        padding: const EdgeInsets.all(20.0),
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Saludo y objetivo
             Text(
-              '¡Hola, ${widget.nombreUsuario}!',
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              '¡Hola, $_nombreUsuario!',
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             Text(
-              'Tu objetivo diario es: ${widget.objetivoDiario} hábitos',
+              'Progreso de hoy: $completadosHoy de $_objetivoDiario hábitos',
               style: TextStyle(fontSize: 16, color: Colors.grey[700]),
             ),
-            const SizedBox(height: 30),
-
-            // Ficha del hábito de ejemplo
-            Card(
-              elevation: 4,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        CircleAvatar(
-                          backgroundColor: colorActual,
-                          child: const Icon(Icons.water_drop, color: Colors.white),
+            const SizedBox(height: 20),
+            Expanded(
+              child: habitosVisibles.isEmpty
+                  ? const Center(child: Text('No hay hábitos registrados.'))
+                  : ListView.builder(
+                itemCount: habitosVisibles.length,
+                itemBuilder: (context, index) {
+                  final h = habitosVisibles[index];
+                  return Card(
+                    margin: const EdgeInsets.symmetric(vertical: 8),
+                    child: ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: Color(h.colorValue),
+                        child: Icon(
+                          h.completadoHoy ? Icons.check : Icons.star,
+                          color: Colors.white,
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _nombreHabito,
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Color: $_colorNombre',
-                                style: TextStyle(
-                                  color: colorActual,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
+                      ),
+                      title: Text(h.nombre, style: const TextStyle(fontWeight: FontWeight.bold)),
+                      subtitle: Text('Racha actual: ${h.rachaActual} días 🔥'),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Checkbox(
+                            value: h.completadoHoy,
+                            onChanged: (val) => _completarHabito(h, val),
                           ),
-                        ),
-                        // Botón Editar Ficha (Funciona)
-                        IconButton(
-                          icon: const Icon(Icons.edit, color: Colors.grey),
-                          onPressed: _abrirEditor,
-                        ),
-                      ],
-                    ),
-                    const Divider(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          _completadoHoy ? 'Estado: Completado hoy' : 'Estado: Pendiente',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w500,
-                            color: _completadoHoy ? Colors.green : Colors.orange,
+                          IconButton(
+                            icon: const Icon(Icons.edit, color: Colors.grey),
+                            onPressed: () => _crearOEditarHabito(h),
                           ),
-                        ),
-                        Checkbox(
-                          value: _completadoHoy,
-                          onChanged: (val) {
-                            setState(() {
-                              _completadoHoy = val ?? false;
-                            });
-                          },
-                        ),
-                      ],
+                          IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.redAccent),
+                            onPressed: () => _borrarHabito(h.id),
+                          ),
+                        ],
+                      ),
                     ),
-                  ],
-                ),
+                  );
+                },
               ),
             ),
           ],
         ),
       ),
-      // Botón flotante para simular la creación de un nuevo hábito
       floatingActionButton: FloatingActionButton(
-        onPressed: _abrirEditor,
-        tooltip: 'Nuevo hábito',
+        onPressed: () => _crearOEditarHabito(),
         child: const Icon(Icons.add),
       ),
     );
