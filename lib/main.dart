@@ -30,7 +30,7 @@ class HabitosApp extends StatelessWidget {
       theme: ThemeData.light(),
       darkTheme: ThemeData.dark(),
       // Si ya está registrado abre HomeScreen, si no, BienvenidaScreen
-      home: yaRegistrado ? const HomeScreen() : const BienvenidaScreen(),
+      home: yaRegistrado ? const HomeScreen() : BienvenidaScreen(),
     );
   }
 }
