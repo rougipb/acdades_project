@@ -4,144 +4,159 @@ import '../services/preferencias_service.dart';
 import '../widgets/habito_card.dart';
 import 'estadisticas_screen.dart';
 import 'ajustes_screen.dart';
+import 'editar_habito_screen.dart';
+
+
+
 
 class HomeScreen extends StatefulWidget {
-  final VoidCallback? onThemeChanged;
-  const HomeScreen({super.key, this.onThemeChanged});
+  final String nombreUsuario;
+  final int objetivoDiario;
+
+  const HomeScreen({
+    super.key,
+    required this.nombreUsuario,
+    required this.objetivoDiario,
+  });
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  String _nombre = '';
-  int _objetivo = 3;
-  double _fontSize = 16.0;
-  bool _ocultarCompletados = false;
-  List<Habito> _habitos = [];
+  // Datos del hábito de ejemplo en memoria
+  String _nombreHabito = 'Beber agua';
+  String _colorNombre = 'Azul';
+  bool _completadoHoy = false;
 
-  String get _hoy => DateTime.now().toIso8601String().substring(0, 10);
+  final Map<String, Color> _mapaColores = {
+    'Azul': Colors.blue,
+    'Verde': Colors.green,
+    'Naranja': Colors.orange,
+  };
 
-  @override
-  void initState() {
-    super.initState();
-    _cargar();
-  }
-
-  Future<void> _cargar() async {
-    final n = await PreferenciasService.getNombreUsuario() ?? 'Usuario';
-    final o = await PreferenciasService.getObjetivoDiario();
-    final f = await PreferenciasService.getTamanoLetra();
-    final oc = await PreferenciasService.getOcultarCompletados();
-    final h = await PreferenciasService.getHabitos();
-
-    setState(() {
-      _nombre = n;
-      _objetivo = o;
-      _fontSize = f;
-      _ocultarCompletados = oc;
-      _habitos = h;
-    });
-  }
-
-  void _agregarHabito() {
-    final ctrl = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Nuevo hábito'),
-        content: TextField(controller: ctrl, decoration: const InputDecoration(labelText: 'Nombre')),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
-          TextButton(
-            onPressed: () async {
-              if (ctrl.text.trim().isNotEmpty) {
-                final nuevo = Habito(
-                  id: DateTime.now().millisecondsSinceEpoch.toString(),
-                  nombre: ctrl.text.trim(),
-                  colorValue: Colors.blue.value,
-                );
-                setState(() => _habitos.add(nuevo));
-                await PreferenciasService.guardarHabitos(_habitos);
-                if (ctx.mounted) Navigator.pop(ctx);
-              }
-            },
-            child: const Text('Guardar'),
-          ),
-        ],
+  // Método para abrir el editor recogiéndolo con await e idóneo chequeo de mounted
+  Future<void> _abrirEditor() async {
+    final resultado = await Navigator.push<Map<String, dynamic>>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditarHabitoScreen(
+          nombreActual: _nombreHabito,
+          colorActualNombre: _colorNombre,
+        ),
       ),
     );
+
+    // Comprobamos si el widget sigue montado después del await
+    if (!mounted) return;
+
+    // Si el resultado no es null, actualizamos la ficha con setState
+    if (resultado != null) {
+      setState(() {
+        _nombreHabito = resultado['nombre'] as String;
+        _colorNombre = resultado['colorNombre'] as String;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final hechosHoy = _habitos.where((h) => h.fechasCompletado.contains(_hoy)).length;
-    final lista = _ocultarCompletados
-        ? _habitos.where((h) => !h.fechasCompletado.contains(_hoy)).toList()
-        : _habitos;
+    final colorActual = _mapaColores[_colorNombre] ?? Colors.blue;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Hola, $_nombre'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.bar_chart),
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EstadisticasScreen())),
-          ),
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () async {
-              await Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => AjustesScreen(onThemeChanged: widget.onThemeChanged ?? () {})),
-              );
-              _cargar();
-            },
-          ),
-        ],
+        title: const Text('HabitosApp - Principal'),
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: Text(
-              'Progreso: $hechosHoy / $_objetivo',
-              style: TextStyle(fontSize: _fontSize, fontWeight: FontWeight.bold),
+      body: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Saludo y objetivo
+            Text(
+              '¡Hola, ${widget.nombreUsuario}!',
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
-          ),
-          Expanded(
-            child: ListView.builder(
-              itemCount: lista.length,
-              itemBuilder: (context, i) {
-                final h = lista[i];
-                final done = h.fechasCompletado.contains(_hoy);
-                return HabitoCard(
-                  habito: h,
-                  completado: done,
-                  fontSize: _fontSize,
-                  onCambiar: (val) async {
-                    setState(() {
-                      if (val == true) {
-                        h.fechasCompletado.add(_hoy);
-                      } else {
-                        h.fechasCompletado.remove(_hoy);
-                      }
-                    });
-                    await PreferenciasService.guardarHabitos(_habitos);
-                  },
-                  onEliminar: () async {
-                    setState(() => _habitos.remove(h));
-                    await PreferenciasService.guardarHabitos(_habitos);
-                  },
-                );
-              },
+            const SizedBox(height: 8),
+            Text(
+              'Tu objetivo diario es: ${widget.objetivoDiario} hábitos',
+              style: TextStyle(fontSize: 16, color: Colors.grey[700]),
             ),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _agregarHabito,
-        child: const Icon(Icons.add),
+            const SizedBox(height: 30),
+
+            // Ficha del hábito de ejemplo
+            Card(
+              elevation: 4,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          backgroundColor: colorActual,
+                          child: const Icon(Icons.water_drop, color: Colors.white),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _nombreHabito,
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Color: $_colorNombre',
+                                style: TextStyle(
+                                  color: colorActual,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.edit, color: Colors.grey),
+                          onPressed: _abrirEditor,
+                        ),
+                      ],
+                    ),
+                    const Divider(height: 24),
+                    // Requisito extra opcional: marcar/desmarcar
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          _completadoHoy ? 'Estado: Completado hoy' : 'Estado: Pendiente',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w500,
+                            color: _completadoHoy ? Colors.green : Colors.orange,
+                          ),
+                        ),
+                        Checkbox(
+                          value: _completadoHoy,
+                          onChanged: (val) {
+                            setState(() {
+                              _completadoHoy = val ?? false;
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
