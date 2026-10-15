@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/habito.dart';
 import '../services/preferencias_service.dart';
-import 'editar_habito_screen.dart';
+import 'gestion_habitos_screen.dart';
 import 'estadisticas_screen.dart';
 import 'ajustes_screen.dart';
 
@@ -40,12 +40,7 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  Future<void> _guardarYRecargar() async {
-    await PreferenciasService.guardarHabitos(_listaHabitos);
-    await _cargarDatos();
-  }
-
-  void _completarHabito(Habito habito, bool? valor) {
+  void _completarHabito(Habito habito, bool? valor) async {
     final hoyStr = DateTime.now().toIso8601String().split('T')[0];
     setState(() {
       if (valor == true) {
@@ -56,46 +51,7 @@ class _HomeScreenState extends State<HomeScreen> {
         habito.fechasCompletado.remove(hoyStr);
       }
     });
-    _guardarYRecargar();
-  }
-
-  Future<void> _crearOEditarHabito([Habito? habitoExistente]) async {
-    final resultado = await Navigator.push<Map<String, dynamic>>(
-      context,
-      MaterialPageRoute(
-        builder: (context) => EditarHabitoScreen(
-          nombreActual: habitoExistente?.nombre ?? '',
-          colorActualValue: habitoExistente?.colorValue ?? Colors.blue.value,
-        ),
-      ),
-    );
-
-    if (!mounted || resultado == null) return;
-
-    setState(() {
-      if (habitoExistente != null) {
-        // Editar hábito existente
-        habitoExistente.nombre = resultado['nombre'] as String;
-        habitoExistente.colorValue = resultado['colorValue'] as int;
-      } else {
-        // Crear nuevo hábito
-        final nuevoHabito = Habito(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          nombre: resultado['nombre'] as String,
-          colorValue: resultado['colorValue'] as int,
-        );
-        _listaHabitos.add(nuevoHabito);
-      }
-    });
-
-    _guardarYRecargar();
-  }
-
-  void _borrarHabito(String id) {
-    setState(() {
-      _listaHabitos.removeWhere((h) => h.id == id);
-    });
-    _guardarYRecargar();
+    await PreferenciasService.guardarHabitos(_listaHabitos);
   }
 
   @override
@@ -111,7 +67,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('HabitosApp - Principal'),
+        title: const Text('Mi Perfil'),
         actions: [
           IconButton(
             icon: const Icon(Icons.bar_chart),
@@ -132,29 +88,76 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(20.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              '¡Hola, $_nombreUsuario!',
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Progreso de hoy: $completadosHoy de $_objetivoDiario hábitos',
-              style: TextStyle(fontSize: 16, color: Colors.grey[700]),
+            // Tarjeta de Perfil de Usuario
+            Card(
+              elevation: 3,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  children: [
+                    const CircleAvatar(
+                      radius: 30,
+                      child: Icon(Icons.person, size: 35),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _nombreUsuario,
+                            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 4),
+                          Text('Objetivo diario: $_objetivoDiario hábitos'),
+                          Text('Progreso de hoy: $completadosHoy de $_objetivoDiario'),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
             const SizedBox(height: 20),
+
+            // Botón para acceder al Gestor de Hábitos
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.tune),
+                label: const Text('Abrir Gestor de Hábitos'),
+                style: ElevatedButton.styleFrom(padding: const EdgeInsets.all(14)),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => GestionHabitosScreen(habitosIniciales: _listaHabitos),
+                    ),
+                  ).then((_) => _cargarDatos()); // Actualiza los hábitos al volver
+                },
+              ),
+            ),
+            const SizedBox(height: 25),
+
+            const Text(
+              'Tus hábitos para hoy:',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+
+            // Lista de hábitos sincronizados
             Expanded(
               child: habitosVisibles.isEmpty
-                  ? const Center(child: Text('No hay hábitos registrados.'))
+                  ? const Center(child: Text('No tienes hábitos registrados en tu perfil.'))
                   : ListView.builder(
                 itemCount: habitosVisibles.length,
                 itemBuilder: (context, index) {
                   final h = habitosVisibles[index];
                   return Card(
-                    margin: const EdgeInsets.symmetric(vertical: 8),
                     child: ListTile(
                       leading: CircleAvatar(
                         backgroundColor: Color(h.colorValue),
@@ -165,22 +168,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       title: Text(h.nombre, style: const TextStyle(fontWeight: FontWeight.bold)),
                       subtitle: Text('Racha actual: ${h.rachaActual} días 🔥'),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Checkbox(
-                            value: h.completadoHoy,
-                            onChanged: (val) => _completarHabito(h, val),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.edit, color: Colors.grey),
-                            onPressed: () => _crearOEditarHabito(h),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.redAccent),
-                            onPressed: () => _borrarHabito(h.id),
-                          ),
-                        ],
+                      trailing: Checkbox(
+                        value: h.completadoHoy,
+                        onChanged: (val) => _completarHabito(h, val),
                       ),
                     ),
                   );
@@ -189,10 +179,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _crearOEditarHabito(),
-        child: const Icon(Icons.add),
       ),
     );
   }
