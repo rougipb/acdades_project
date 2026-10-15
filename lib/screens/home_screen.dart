@@ -1,13 +1,7 @@
 import 'package:flutter/material.dart';
-import '../models/habito.dart';
-import '../services/preferencias_service.dart';
-import '../widgets/habito_card.dart';
+import 'editar_habito_screen.dart';
 import 'estadisticas_screen.dart';
 import 'ajustes_screen.dart';
-import 'editar_habito_screen.dart';
-
-
-
 
 class HomeScreen extends StatefulWidget {
   final String nombreUsuario;
@@ -35,7 +29,7 @@ class _HomeScreenState extends State<HomeScreen> {
     'Naranja': Colors.orange,
   };
 
-  // Método para abrir el editor recogiéndolo con await e idóneo chequeo de mounted
+  // Método para abrir el editor de hábito
   Future<void> _abrirEditor() async {
     final resultado = await Navigator.push<Map<String, dynamic>>(
       context,
@@ -47,10 +41,8 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
 
-    // Comprobamos si el widget sigue montado después del await
     if (!mounted) return;
 
-    // Si el resultado no es null, actualizamos la ficha con setState
     if (resultado != null) {
       setState(() {
         _nombreHabito = resultado['nombre'] as String;
@@ -66,6 +58,34 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('HabitosApp - Principal'),
+        actions: [
+          // Botón para ir a Estadísticas
+          IconButton(
+            icon: const Icon(Icons.bar_chart),
+            tooltip: 'Estadísticas',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const EstadisticasScreen(),
+                ),
+              );
+            },
+          ),
+          // Botón para ir a Ajustes
+          IconButton(
+            icon: const Icon(Icons.settings),
+            tooltip: 'Ajustes',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const AjustesScreen(),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
@@ -123,6 +143,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             ],
                           ),
                         ),
+                        // Botón Editar Ficha (Funciona)
                         IconButton(
                           icon: const Icon(Icons.edit, color: Colors.grey),
                           onPressed: _abrirEditor,
@@ -130,7 +151,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       ],
                     ),
                     const Divider(height: 24),
-                    // Requisito extra opcional: marcar/desmarcar
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -157,6 +177,12 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
+      ),
+      // Botón flotante para simular la creación de un nuevo hábito
+      floatingActionButton: FloatingActionButton(
+        onPressed: _abrirEditor,
+        tooltip: 'Nuevo hábito',
+        child: const Icon(Icons.add),
       ),
     );
   }
