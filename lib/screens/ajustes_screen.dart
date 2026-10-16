@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import '../services/preferencias_service.dart';
+import '../main.dart';
 import 'bienvenida_screen.dart';
 
 class AjustesScreen extends StatefulWidget {
-  final VoidCallback onThemeChanged;
-  const AjustesScreen({super.key, required this.onThemeChanged});
+  const AjustesScreen({super.key});
 
   @override
   State<AjustesScreen> createState() => _AjustesScreenState();
@@ -18,10 +18,10 @@ class _AjustesScreenState extends State<AjustesScreen> {
   @override
   void initState() {
     super.initState();
-    _cargar();
+    _cargarAjustes();
   }
 
-  void _cargar() async {
+  Future<void> _cargarAjustes() async {
     final o = await PreferenciasService.getModoOscuro();
     final t = await PreferenciasService.getTamanoLetra();
     final oc = await PreferenciasService.getOcultarCompletados();
@@ -32,22 +32,12 @@ class _AjustesScreenState extends State<AjustesScreen> {
     });
   }
 
-  void _borrar(BuildContext context) async {
-    await PreferenciasService.borrarTodo();
-    if (context.mounted) {
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => BienvenidaScreen()),
-            (_) => false,
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Ajustes')),
       body: ListView(
+        padding: const EdgeInsets.all(16.0),
         children: [
           SwitchListTile(
             title: const Text('Modo oscuro'),
@@ -55,32 +45,62 @@ class _AjustesScreenState extends State<AjustesScreen> {
             onChanged: (val) async {
               setState(() => _oscuro = val);
               await PreferenciasService.setModoOscuro(val);
-              widget.onThemeChanged();
+              if (mounted) HabitosApp.of(context)?.recargarAjustes();
             },
           ),
+          const Divider(),
+          ListTile(
+            title: const Text('Tamaño de letra'),
+            subtitle: Slider(
+              value: _tamano,
+              min: 12.0,
+              max: 24.0,
+              divisions: 6,
+              label: _tamano.toStringAsFixed(0),
+              onChanged: (val) async {
+                setState(() => _tamano = val);
+                await PreferenciasService.setTamanoLetra(val);
+                if (mounted) HabitosApp.of(context)?.recargarAjustes();
+              },
+            ),
+          ),
+          const Divider(),
           SwitchListTile(
-            title: const Text('Ocultar completados hoy'),
+            title: const Text('Ocultar hábitos completados hoy'),
             value: _ocultar,
             onChanged: (val) async {
               setState(() => _ocultar = val);
               await PreferenciasService.setOcultarCompletados(val);
             },
           ),
-          ListTile(
-            title: Text('Tamaño de letra: ${_tamano.toInt()}'),
-            subtitle: Slider(
-              min: 12.0,
-              max: 22.0,
-              value: _tamano,
-              onChanged: (v) => setState(() => _tamano = v),
-              onChangeEnd: (v) => PreferenciasService.setTamanoLetra(v),
-            ),
-          ),
           const Divider(),
-          ListTile(
-            leading: const Icon(Icons.delete, color: Colors.red),
-            title: const Text('Restablecer aplicación', style: TextStyle(color: Colors.red)),
-            onTap: () => _borrar(context),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () async {
+              final confirmar = await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Borrar todos los datos'),
+                  content: const Text('¿Estás seguro? La app se reiniciará por completo.'),
+                  actions: [
+                    TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+                    TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Borrar', style: TextStyle(color: Colors.red))),
+                  ],
+                ),
+              );
+
+              if (confirmar == true) {
+                await PreferenciasService.borrarTodo();
+                if (mounted) {
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (_) => const BienvenidaScreen()),
+                        (route) => false,
+                  );
+                }
+              }
+            },
+            child: const Text('Borrar datos de la app', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),

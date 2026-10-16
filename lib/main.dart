@@ -4,33 +4,70 @@ import 'screens/bienvenida_screen.dart';
 import 'screens/home_screen.dart';
 
 void main() async {
-  // Asegura que las llamadas asíncronas de Flutter estén inicializadas
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Registramos la apertura de la app (cuenta aperturas y guarda fecha/hora)
   await PreferenciasService.registrarApertura();
-
-  // Comprobamos si el usuario ya registró su nombre
-  final String? nombre = await PreferenciasService.getNombreUsuario();
-  final bool yaRegistrado = nombre != null && nombre.isNotEmpty;
-
-  runApp(HabitosApp(yaRegistrado: yaRegistrado));
+  runApp(const HabitosApp());
 }
 
-class HabitosApp extends StatelessWidget {
-  final bool yaRegistrado;
+class HabitosApp extends StatefulWidget {
+  const HabitosApp({super.key});
 
-  const HabitosApp({super.key, required this.yaRegistrado});
+  static _HabitosAppState? of(BuildContext context) =>
+      context.findAncestorStateOfType<_HabitosAppState>();
+
+  @override
+  State<HabitosApp> createState() => _HabitosAppState();
+}
+
+class _HabitosAppState extends State<HabitosApp> {
+  bool _modoOscuro = false;
+  double _tamanoLetra = 16.0;
+  bool _cargando = true;
+  bool _yaRegistrado = false;
+
+  @override
+  void initState() {
+    super.initState();
+    recargarAjustes();
+  }
+
+  Future<void> recargarAjustes() async {
+    final oscuro = await PreferenciasService.getModoOscuro();
+    final tamano = await PreferenciasService.getTamanoLetra();
+    final nombre = await PreferenciasService.getNombreUsuario();
+
+    setState(() {
+      _modoOscuro = oscuro;
+      _tamanoLetra = tamano;
+      _yaRegistrado = nombre != null && nombre.isNotEmpty;
+      _cargando = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_cargando) {
+      return const MaterialApp(
+        home: Scaffold(body: Center(child: CircularProgressIndicator())),
+      );
+    }
+
     return MaterialApp(
       title: 'HabitosApp',
       debugShowCheckedModeBanner: false,
+      themeMode: _modoOscuro ? ThemeMode.dark : ThemeMode.light,
       theme: ThemeData.light(),
       darkTheme: ThemeData.dark(),
-      // Si ya está registrado abre HomeScreen, si no, BienvenidaScreen
-      home: yaRegistrado ? const HomeScreen() : BienvenidaScreen(),
+      // Escalamos la letra globalmente mediante textScaler en lugar de apply()
+      builder: (context, child) {
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: TextScaler.linear(_tamanoLetra / 16.0),
+          ),
+          child: child!,
+        );
+      },
+      home: _yaRegistrado ? const HomeScreen() : const BienvenidaScreen(),
     );
   }
 }

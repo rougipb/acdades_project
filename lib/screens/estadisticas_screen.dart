@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../models/habito.dart';
 import '../services/preferencias_service.dart';
 
 class EstadisticasScreen extends StatefulWidget {
@@ -10,23 +11,24 @@ class EstadisticasScreen extends StatefulWidget {
 
 class _EstadisticasScreenState extends State<EstadisticasScreen> {
   int _aperturas = 0;
-  String _ultima = '-';
-  int _completados = 0;
+  String _ultimaApertura = 'No registrada';
+  List<Habito> _habitos = [];
 
   @override
   void initState() {
     super.initState();
-    _cargar();
+    _cargarStats();
   }
 
-  void _cargar() async {
-    final a = await PreferenciasService.getContadorAperturas();
-    final u = await PreferenciasService.getUltimaApertura() ?? '-';
+  Future<void> _cargarStats() async {
+    final ap = await PreferenciasService.getContadorAperturas();
+    final ult = await PreferenciasService.getUltimaApertura();
     final h = await PreferenciasService.getHabitos();
+
     setState(() {
-      _aperturas = a;
-      _ultima = u.length >= 16 ? u.substring(0, 16).replaceFirst('T', ' ') : u;
-      _completados = h.fold(0, (total, item) => total + item.fechasCompletado.length);
+      _aperturas = ap;
+      _ultimaApertura = ult != null ? DateTime.parse(ult).toLocal().toString().split('.')[0] : 'Hoy';
+      _habitos = h;
     });
   }
 
@@ -35,10 +37,22 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Estadísticas')),
       body: ListView(
+        padding: const EdgeInsets.all(16.0),
         children: [
-          ListTile(title: const Text('Veces abierta la app'), trailing: Text('$_aperturas')),
-          ListTile(title: const Text('Última apertura'), subtitle: Text(_ultima)),
-          ListTile(title: const Text('Total hábitos completados'), trailing: Text('$_completados')),
+          Card(
+            child: ListTile(
+              title: const Text('Aperturas de la app'),
+              subtitle: Text('Abierta $_aperturas veces. Última: $_ultimaApertura'),
+            ),
+          ),
+          const SizedBox(height: 10),
+          const Text('Rachas por hábito:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          ..._habitos.map((h) => Card(
+            child: ListTile(
+              title: Text(h.nombre),
+              subtitle: Text('Racha actual: ${h.rachaActual} días | Total completado: ${h.fechasCompletado.length} días'),
+            ),
+          )),
         ],
       ),
     );
