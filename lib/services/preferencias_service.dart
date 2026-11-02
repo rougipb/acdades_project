@@ -18,12 +18,15 @@ class PreferenciasService {
   static SharedPreferences? _prefs;
 
   // Inicializa la instancia de SharedPreferences
-  static Future<SharedPreferences> get _instance async {      _prefs ??= await SharedPreferences.getInstance();
-  return _prefs!;
+  static Future<SharedPreferences> get _instance async {
+    _prefs ??= await SharedPreferences.getInstance();
+    return _prefs!;
   }
 
+
+
   // ---------------------------------------------------------------------------
-  // REGISTRO DE APERTURAS (Muestra uso de int y String)
+  // REGISTRO DE APERTURAS
   // ---------------------------------------------------------------------------
   static Future<void> registrarApertura() async {
     final prefs = await _instance;
@@ -43,11 +46,21 @@ class PreferenciasService {
   }
 
   // ---------------------------------------------------------------------------
-  // DATOS DE USUARIO (Muestra uso de String e int)
+  // DATOS DE USUARIO
   // ---------------------------------------------------------------------------
   static Future<void> guardarUsuario(String nombre, int objetivo) async {
     final prefs = await _instance;
     await prefs.setString(_keyNombreUsuario, nombre);
+    await prefs.setInt(_keyObjetivoDiario, objetivo);
+  }
+
+  static Future<void> setNombreUsuario(String nombre) async {
+    final prefs = await _instance;
+    await prefs.setString(_keyNombreUsuario, nombre);
+  }
+
+  static Future<void> setObjetivoDiario(int objetivo) async {
+    final prefs = await _instance;
     await prefs.setInt(_keyObjetivoDiario, objetivo);
   }
 
@@ -62,7 +75,7 @@ class PreferenciasService {
   }
 
   // ---------------------------------------------------------------------------
-  // AJUSTES DE APARIENCIA (Muestra uso de bool y double)
+  // AJUSTES DE APARIENCIA
   // ---------------------------------------------------------------------------
   static Future<void> setModoOscuro(bool valor) async {
     final prefs = await _instance;
@@ -95,11 +108,10 @@ class PreferenciasService {
   }
 
   // ---------------------------------------------------------------------------
-  // GESTIÓN DE HÁBITOS SERIALIZADOS (Muestra uso de List<String> con JSON)
+  // GESTIÓN DE HÁBITOS SERIALIZADOS
   // ---------------------------------------------------------------------------
   static Future<void> guardarHabitos(List<Habito> habitos) async {
     final prefs = await _instance;
-    // Mapeamos cada objeto Habito a un String en formato JSON mediante jsonEncode
     List<String> habitosJson = habitos.map((h) => jsonEncode(h.toJson())).toList();
     await prefs.setStringList(_keyHabitos, habitosJson);
   }
@@ -110,14 +122,13 @@ class PreferenciasService {
 
     if (habitosJson == null) return [];
 
-    // Reconstruimos los objetos Habito desde JSON usando jsonDecode
     return habitosJson
         .map((item) => Habito.fromJson(jsonDecode(item) as Map<String, dynamic>))
         .toList();
   }
 
   // ---------------------------------------------------------------------------
-  // REINICIALIZAR APP (Borrado completo)
+  // REINICIALIZAR APP
   // ---------------------------------------------------------------------------
   static Future<void> borrarTodo() async {
     final prefs = await _instance;

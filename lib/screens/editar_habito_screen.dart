@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../widgets/campo_texto_app.dart';
+import '../widgets/boton_principal.dart';
 
 class EditarHabitoScreen extends StatefulWidget {
   final String nombreActual;
@@ -55,12 +57,10 @@ class _EditarHabitoScreenState extends State<EditarHabitoScreen> {
         padding: const EdgeInsets.all(20.0),
         child: Column(
           children: [
-            TextField(
+            // Campo reutilizable
+            CampoTextoApp(
+              etiqueta: 'Nombre del hábito',
               controller: _nombreController,
-              decoration: const InputDecoration(
-                labelText: 'Nombre del hábito',
-                border: OutlineInputBorder(),
-              ),
             ),
             const SizedBox(height: 20),
             Row(
@@ -80,9 +80,10 @@ class _EditarHabitoScreenState extends State<EditarHabitoScreen> {
               }).toList(),
             ),
             const SizedBox(height: 30),
-            ElevatedButton(
+            // Botón principal reutilizable
+            BotonPrincipal(
+              texto: 'Guardar Hábito',
               onPressed: _guardar,
-              child: const Text('Guardar Hábito'),
             ),
           ],
         ),

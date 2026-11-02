@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/habito.dart';
 import '../services/preferencias_service.dart';
+import '../widgets/dato_estadistica.dart';
 
 class EstadisticasScreen extends StatefulWidget {
   const EstadisticasScreen({super.key});
@@ -39,18 +40,36 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16.0),
         children: [
-          Card(
-            child: ListTile(
-              title: const Text('Aperturas de la app'),
-              subtitle: Text('Abierta $_aperturas veces. Última: $_ultimaApertura'),
-            ),
+          DatoEstadistica(
+            etiqueta: 'Aperturas de la app',
+            valor: '$_aperturas veces (Última: $_ultimaApertura)',
+            icono: Icons.app_shortcut,
+            color: Colors.deepOrange,
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            'Rachas por hábito:',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 10),
-          const Text('Rachas por hábito:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          ..._habitos.map((h) => Card(
-            child: ListTile(
-              title: Text(h.nombre),
-              subtitle: Text('Racha actual: ${h.rachaActual} días | Total completado: ${h.fechasCompletado.length} días'),
+          ..._habitos.map((h) => Padding(
+            padding: const EdgeInsets.only(bottom: 10.0),
+            child: Column(
+              children: [
+                DatoEstadistica(
+                  etiqueta: 'Racha actual - ${h.nombre}',
+                  valor: '${h.rachaActual} días',
+                  icono: Icons.local_fire_department,
+                  color: Color(h.colorValue),
+                ),
+                const SizedBox(height: 6),
+                DatoEstadistica(
+                  etiqueta: 'Días completados - ${h.nombre}',
+                  valor: '${h.fechasCompletado.length} días',
+                  icono: Icons.check_circle_outline,
+                  color: Colors.green,
+                ),
+              ],
             ),
           )),
         ],

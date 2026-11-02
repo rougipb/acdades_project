@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import '../models/habito.dart';
 import '../services/preferencias_service.dart';
+import '../widgets/boton_principal.dart';
+import '../widgets/tarjeta_habito.dart';
 import 'gestion_habitos_screen.dart';
 import 'estadisticas_screen.dart';
 import 'ajustes_screen.dart';
+import 'administracion_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -40,15 +43,15 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  void _completarHabito(Habito habito, bool? valor) async {
+  void _completarHabito(Habito habito) async {
     final hoyStr = DateTime.now().toIso8601String().split('T')[0];
     setState(() {
-      if (valor == true) {
+      if (habito.completadoHoy) {
+        habito.fechasCompletado.remove(hoyStr);
+      } else {
         if (!habito.fechasCompletado.contains(hoyStr)) {
           habito.fechasCompletado.add(hoyStr);
         }
-      } else {
-        habito.fechasCompletado.remove(hoyStr);
       }
     });
     await PreferenciasService.guardarHabitos(_listaHabitos);
@@ -70,6 +73,14 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Text('Mi Perfil'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.admin_panel_settings),
+            tooltip: 'Administración',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AdministracionScreen()),
+            ),
+          ),
+          IconButton(
             icon: const Icon(Icons.bar_chart),
             tooltip: 'Estadísticas',
             onPressed: () => Navigator.push(
@@ -87,6 +98,9 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
+
+
+
       body: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(
@@ -122,26 +136,22 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 10),
 
-            // Botón para acceder al Gestor de Hábitos
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                icon: const Icon(Icons.tune),
-                label: const Text('Abrir Gestor de Hábitos'),
-                style: ElevatedButton.styleFrom(padding: const EdgeInsets.all(14)),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => GestionHabitosScreen(habitosIniciales: _listaHabitos),
-                    ),
-                  ).then((_) => _cargarDatos()); // Actualiza los hábitos al volver
-                },
-              ),
+            // Reemplazo por BotonPrincipal reutilizable
+            BotonPrincipal(
+              texto: 'Abrir Gestor de Hábitos',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => GestionHabitosScreen(habitosIniciales: _listaHabitos),
+                  ),
+                ).then((_) => _cargarDatos());
+              },
             ),
-            const SizedBox(height: 25),
+
+            const SizedBox(height: 15),
 
             const Text(
               'Tus hábitos para hoy:',
@@ -149,7 +159,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 10),
 
-            // Lista de hábitos sincronizados
+            // Lista de hábitos utilizando TarjetaHabito reutilizable
             Expanded(
               child: habitosVisibles.isEmpty
                   ? const Center(child: Text('No tienes hábitos registrados en tu perfil.'))
@@ -157,22 +167,25 @@ class _HomeScreenState extends State<HomeScreen> {
                 itemCount: habitosVisibles.length,
                 itemBuilder: (context, index) {
                   final h = habitosVisibles[index];
-                  return Card(
-                    child: ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: Color(h.colorValue),
-                        child: Icon(
-                          h.completadoHoy ? Icons.check : Icons.star,
-                          color: Colors.white,
+                  return TarjetaHabito(
+                    nombre: h.nombre,
+                    color: Color(h.colorValue),
+                    completadoHoy: h.completadoHoy,
+                    onCompletar: () => _completarHabito(h),
+                    onEditar: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => GestionHabitosScreen(habitosIniciales: _listaHabitos),
                         ),
-                      ),
-                      title: Text(h.nombre, style: const TextStyle(fontWeight: FontWeight.bold)),
-                      subtitle: Text('Racha actual: ${h.rachaActual} días 🔥'),
-                      trailing: Checkbox(
-                        value: h.completadoHoy,
-                        onChanged: (val) => _completarHabito(h, val),
-                      ),
-                    ),
+                      ).then((_) => _cargarDatos());
+                    },
+                    onEliminar: () async {
+                      setState(() {
+                        _listaHabitos.removeWhere((item) => item.id == h.id);
+                      });
+                      await PreferenciasService.guardarHabitos(_listaHabitos);
+                    },
                   );
                 },
               ),

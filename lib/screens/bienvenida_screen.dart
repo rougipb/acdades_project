@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../services/preferencias_service.dart';
+import '../widgets/campo_texto_app.dart';
+import '../widgets/boton_principal.dart';
 import 'home_screen.dart';
+import 'registro_screen.dart';
 
 class BienvenidaScreen extends StatefulWidget {
   const BienvenidaScreen({super.key});
@@ -10,73 +13,76 @@ class BienvenidaScreen extends StatefulWidget {
 }
 
 class _BienvenidaScreenState extends State<BienvenidaScreen> {
-  final _nombreCtrl = TextEditingController();
-  final _objetivoCtrl = TextEditingController();
+  final TextEditingController _usuarioCtrl = TextEditingController();
+  final TextEditingController _passwordCtrl = TextEditingController();
+  static const Color colorNaranjaOscuro = Colors.deepOrange;
 
-  @override
-  void dispose() {
-    _nombreCtrl.dispose();
-    _objetivoCtrl.dispose();
-    super.dispose();
-  }
+  Future<void> _iniciarSesion() async {
+    final usuarioIngresado = _usuarioCtrl.text.trim();
+    final passwordIngresada = _passwordCtrl.text.trim();
 
-  void _comenzar() async {
-    final nombre = _nombreCtrl.text.trim();
-    final objetivoStr = _objetivoCtrl.text.trim();
-
-    if (nombre.isEmpty || objetivoStr.isEmpty) {
+    // 1. Validar si faltan datos
+    if (usuarioIngresado.isEmpty || passwordIngresada.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Por favor, rellena todos los campos'),
-          backgroundColor: Colors.deepOrange,
+          content: Text('Por favor, rellena todos los campos.'),
+          backgroundColor: Colors.red,
         ),
       );
       return;
     }
 
-    final objetivo = int.tryParse(objetivoStr) ?? 5;
+    // 2. Obtener el usuario guardado en las preferencias
+    final usuarioGuardado = await PreferenciasService.getNombreUsuario();
 
-    await PreferenciasService.guardarUsuario(nombre, objetivo);
-
-    if (mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
+    // 3. Comprobar si existe un usuario registrado y si coincide
+    if (usuarioGuardado == null || usuarioGuardado.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No existe ningún usuario registrado. Por favor, regístrate primero.'),
+          backgroundColor: Colors.orange,
+        ),
       );
+      return;
     }
+
+    if (usuarioIngresado != usuarioGuardado) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Usuario o contraseña incorrectos.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Si todo es correcto, navega a HomeScreen
+    if (!mounted) return;
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const HomeScreen()),
+    );
+  }
+
+  @override
+  void dispose() {
+    _usuarioCtrl.dispose();
+    _passwordCtrl.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // Definimos la paleta de colores basada en el color naranja
-    const colorNaranjaPrincipal = Colors.orange;
-    const colorNaranjaOscuro = Colors.deepOrange;
-
     return Scaffold(
       body: SafeArea(
-        child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 28.0, vertical: 20.0),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Logo/Icono destacado de la aplicación
-                Container(
-                  padding: const EdgeInsets.all(20.0),
-                  decoration: BoxDecoration(
-                    color: colorNaranjaPrincipal.withOpacity(0.15),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.screen_lock_portrait,
-                    size: 80,
-                    color: colorNaranjaOscuro,
-                  ),
-                ),
-                const SizedBox(height: 24),
-
-                // Título y Subtítulo
+                const SizedBox(height: 40),
                 const Text(
                   'HabitosApp',
                   style: TextStyle(
@@ -89,7 +95,7 @@ class _BienvenidaScreenState extends State<BienvenidaScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Construye tu rutina día a día',
+                  'Inicia sesión para gestionar tus hábitos',
                   style: TextStyle(
                     fontSize: 16,
                     color: Colors.grey[600],
@@ -98,63 +104,37 @@ class _BienvenidaScreenState extends State<BienvenidaScreen> {
                 ),
                 const SizedBox(height: 36),
 
-                // Campo: Nombre de usuario
-                TextField(
-                  controller: _nombreCtrl,
-                  decoration: InputDecoration(
-                    labelText: 'Tu nombre',
-                    prefixIcon: const Icon(Icons.person_outline, color: colorNaranjaOscuro),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: colorNaranjaOscuro, width: 2),
-                    ),
-                  ),
+                // Campo 1: Nombre de usuario (reutilizable)
+                CampoTextoApp(
+                  etiqueta: 'Nombre de usuario',
+                  controller: _usuarioCtrl,
+                ),
+
+                // Campo 2: Contraseña oculta (reutilizable)
+                CampoTextoApp(
+                  etiqueta: 'Contraseña',
+                  controller: _passwordCtrl,
+                  ocultarTexto: true, // Se ocultan los caracteres como exige la práctica
                 ),
                 const SizedBox(height: 20),
 
-                // Campo: Objetivo diario de hábitos
-                TextField(
-                  controller: _objetivoCtrl,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    labelText: 'Objetivo diario de hábitos (número)',
-                    prefixIcon: const Icon(Icons.flag_outlined, color: colorNaranjaOscuro),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: colorNaranjaOscuro, width: 2),
-                    ),
-                  ),
+                // Botón principal (reutilizable)
+                BotonPrincipal(
+                  texto: 'Iniciar Sesión',
+                  onPressed: _iniciarSesion,
                 ),
-                const SizedBox(height: 32),
 
-                // Botón principal de Comenzar
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: ElevatedButton(
-                    onPressed: _comenzar,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: colorNaranjaOscuro,
-                      foregroundColor: Colors.white,
-                      elevation: 3,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text(
-                      'Comenzar',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
+                const SizedBox(height: 10),
+
+                // Enlace a Registro
+                TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const RegistroScreen()),
+                    );
+                  },
+                  child: const Text('¿No tienes cuenta? Regístrate aquí'),
                 ),
               ],
             ),

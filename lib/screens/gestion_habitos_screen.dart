@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/habito.dart';
 import '../services/preferencias_service.dart';
 import 'editar_habito_screen.dart';
+import '../widgets/tarjeta_habito.dart';
 
 class GestionHabitosScreen extends StatefulWidget {
   final List<Habito> habitosIniciales;
@@ -26,7 +27,7 @@ class _GestionHabitosScreenState extends State<GestionHabitosScreen> {
   }
 
   Future<void> _crearOEditarHabito([Habito? habitoExistente]) async {
-    final resultado = await Navigator.push<Map<String, dynamic>>(
+    final res = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => EditarHabitoScreen(
@@ -36,7 +37,9 @@ class _GestionHabitosScreenState extends State<GestionHabitosScreen> {
       ),
     );
 
-    if (!mounted || resultado == null) return;
+    if (!mounted || res == null) return;
+
+    final resultado = res as Map<String, dynamic>;
 
     setState(() {
       if (habitoExistente != null) {
@@ -56,14 +59,36 @@ class _GestionHabitosScreenState extends State<GestionHabitosScreen> {
   }
 
   void _borrarHabito(String id) async {
-    setState(() {
-      _listaHabitos.removeWhere((h) => h.id == id);
-    });
-    await _guardar();
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Eliminar Hábito'),
+        content: const Text('¿Seguro que quieres eliminar este hábito?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar == true) {
+      setState(() {
+        _listaHabitos.removeWhere((h) => h.id == id);
+      });
+      await _guardar();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final hoy = DateTime.now().toIso8601String().split('T')[0];
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Gestor de Hábitos'),
@@ -71,33 +96,28 @@ class _GestionHabitosScreenState extends State<GestionHabitosScreen> {
       body: _listaHabitos.isEmpty
           ? const Center(child: Text('No hay hábitos. Crea uno con el botón +'))
           : ListView.builder(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.symmetric(vertical: 12.0),
         itemCount: _listaHabitos.length,
         itemBuilder: (context, index) {
           final h = _listaHabitos[index];
-          return Card(
-            margin: const EdgeInsets.symmetric(vertical: 6.0),
-            child: ListTile(
-              leading: CircleAvatar(
-                backgroundColor: Color(h.colorValue),
-                child: const Icon(Icons.star, color: Colors.white),
-              ),
-              title: Text(h.nombre, style: const TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: Text('Racha: ${h.rachaActual} días'),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.edit, color: Colors.grey),
-                    onPressed: () => _crearOEditarHabito(h),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.delete, color: Colors.redAccent),
-                    onPressed: () => _borrarHabito(h.id),
-                  ),
-                ],
-              ),
-            ),
+          final esCompletadoHoy = h.fechasCompletado.contains(hoy);
+
+          return TarjetaHabito(
+            nombre: h.nombre,
+            color: Color(h.colorValue),
+            completadoHoy: esCompletadoHoy,
+            onCompletar: () async {
+              setState(() {
+                if (esCompletadoHoy) {
+                  h.fechasCompletado.remove(hoy);
+                } else {
+                  h.fechasCompletado.add(hoy);
+                }
+              });
+              await _guardar();
+            },
+            onEditar: () => _crearOEditarHabito(h),
+            onEliminar: () => _borrarHabito(h.id),
           );
         },
       ),
