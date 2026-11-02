@@ -21,26 +21,58 @@ class _BienvenidaScreenState extends State<BienvenidaScreen> {
     final usuarioIngresado = _usuarioCtrl.text.trim();
     final passwordIngresada = _passwordCtrl.text.trim();
 
+    // 1. Validar que los campos no estén vacíos
     if (usuarioIngresado.isEmpty || passwordIngresada.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Por favor, rellena todos los campos.'),
+          content: Text('Faltan datos por rellenar.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    // 2. Obtener datos guardados en SharedPreferences
+    final usuarioGuardado = await PreferenciasService.getNombreUsuario();
+    final passwordGuardada = await PreferenciasService.getPasswordUsuario();
+
+    // 3. Casos especiales para el Administrador genérico (si entra directo como admin)
+    if (usuarioIngresado.toLowerCase() == 'admin' && passwordIngresada == 'admin123') {
+      await PreferenciasService.setNombreUsuario('admin');
+      await PreferenciasService.setEsAdmin(true);
+
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
+      );
+      return;
+    }
+
+    // 4. Si no hay ningún usuario registrado en la base de datos local
+    if (usuarioGuardado == null || usuarioGuardado.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No existe ninguna cuenta registrada. Regístrate primero.'),
           backgroundColor: Colors.red,
         ),
       );
       return;
     }
 
-    // Identificar si es cuenta de administrador
-    final esAdmin = (usuarioIngresado.toLowerCase() == 'admin' && passwordIngresada == 'admin123');
+    // 5. Comprobar si las credenciales coinciden con las registradas
+    if (usuarioIngresado != usuarioGuardado || passwordIngresada != passwordGuardada) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Usuario o contraseña incorrectos.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
 
-    // Guardar usuario y rol en SharedPreferences
-    await PreferenciasService.setNombreUsuario(usuarioIngresado);
-    await PreferenciasService.setEsAdmin(esAdmin);
-
+    // Si todo es correcto, permite entrar
     if (!mounted) return;
-
-    // Navegar a la pantalla principal
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (_) => const HomeScreen()),

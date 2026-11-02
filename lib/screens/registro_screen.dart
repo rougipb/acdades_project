@@ -21,30 +21,30 @@ class _RegistroScreenState extends State<RegistroScreen> {
     if (usuario.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Por favor, rellena todos los campos'),
+          content: Text('Por favor, rellena todos los campos.'),
           backgroundColor: Colors.red,
         ),
       );
       return;
     }
 
-    // 1. Identificar si se está registrando la cuenta de Administrador
+    // Identificar si se registra la cuenta de Administrador
     final esAdmin = (usuario.toLowerCase() == 'admin' && password == 'admin123');
 
-    // 2. Guardar el nuevo usuario y rol en SharedPreferences
+    // Guardar usuario, contraseña y rol
     await PreferenciasService.setNombreUsuario(usuario);
+    await PreferenciasService.setPasswordUsuario(password);
     await PreferenciasService.setEsAdmin(esAdmin);
 
     if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Cuenta creada con éxito. Ahora puedes iniciar sesión.'),
+        content: Text('Cuenta creada con éxito. Ya puedes iniciar sesión.'),
         backgroundColor: Colors.green,
       ),
     );
 
-    // 3. Volver a la pantalla de Inicio de Sesión
     Navigator.pop(context);
   }
 

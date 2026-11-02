@@ -45,7 +45,17 @@ class PreferenciasService {
     final prefs = await _instance;
     return prefs.getString(_keyUltimaApertura);
   }
+  static const String _keyPasswordUsuario = 'password_usuario';
 
+  static Future<void> setPasswordUsuario(String password) async {
+    final prefs = await _instance;
+    await prefs.setString(_keyPasswordUsuario, password);
+  }
+
+  static Future<String?> getPasswordUsuario() async {
+    final prefs = await _instance;
+    return prefs.getString(_keyPasswordUsuario);
+  }
   // ---------------------------------------------------------------------------
   // DATOS DE USUARIO
   // ---------------------------------------------------------------------------
