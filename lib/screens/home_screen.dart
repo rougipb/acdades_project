@@ -20,6 +20,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _objetivoDiario = 5;
   List<Habito> _listaHabitos = [];
   bool _ocultarCompletados = false;
+  bool _esAdmin = false;
   bool _cargando = true;
 
   @override
@@ -33,12 +34,14 @@ class _HomeScreenState extends State<HomeScreen> {
     final objetivo = await PreferenciasService.getObjetivoDiario();
     final habitos = await PreferenciasService.getHabitos();
     final ocultar = await PreferenciasService.getOcultarCompletados();
+    final esAdmin = await PreferenciasService.getEsAdmin();
 
     setState(() {
       _nombreUsuario = nombre;
       _objetivoDiario = objetivo;
       _listaHabitos = habitos;
       _ocultarCompletados = ocultar;
+      _esAdmin = esAdmin;
       _cargando = false;
     });
   }
@@ -72,14 +75,16 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('Mi Perfil'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.admin_panel_settings),
-            tooltip: 'Administración',
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const AdministracionScreen()),
+          // Solo los administradores ven el acceso al panel de administración
+          if (_esAdmin)
+            IconButton(
+              icon: const Icon(Icons.admin_panel_settings, color: Colors.amber),
+              tooltip: 'Administración',
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AdministracionScreen()),
+              ),
             ),
-          ),
           IconButton(
             icon: const Icon(Icons.bar_chart),
             tooltip: 'Estadísticas',
@@ -98,9 +103,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-
-
-
       body: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(
@@ -138,7 +140,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 10),
 
-            // Reemplazo por BotonPrincipal reutilizable
+            // Botón principal reutilizable para abrir el gestor
             BotonPrincipal(
               texto: 'Abrir Gestor de Hábitos',
               onPressed: () {
@@ -159,7 +161,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 10),
 
-            // Lista de hábitos utilizando TarjetaHabito reutilizable
+            // Lista de hábitos utilizando el componente TarjetaHabito
             Expanded(
               child: habitosVisibles.isEmpty
                   ? const Center(child: Text('No tienes hábitos registrados en tu perfil.'))
@@ -181,10 +183,30 @@ class _HomeScreenState extends State<HomeScreen> {
                       ).then((_) => _cargarDatos());
                     },
                     onEliminar: () async {
-                      setState(() {
-                        _listaHabitos.removeWhere((item) => item.id == h.id);
-                      });
-                      await PreferenciasService.guardarHabitos(_listaHabitos);
+                      final confirmar = await showDialog<bool>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: const Text('Eliminar Hábito'),
+                          content: const Text('¿Seguro que quieres eliminar este hábito?'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx, false),
+                              child: const Text('Cancelar'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx, true),
+                              child: const Text('Eliminar'),
+                            ),
+                          ],
+                        ),
+                      );
+
+                      if (confirmar == true) {
+                        setState(() {
+                          _listaHabitos.removeWhere((item) => item.id == h.id);
+                        });
+                        await PreferenciasService.guardarHabitos(_listaHabitos);
+                      }
                     },
                   );
                 },

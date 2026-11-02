@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:acdades_project/screens/administracion_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/habito.dart';
 
@@ -72,6 +73,21 @@ class PreferenciasService {
   static Future<int> getObjetivoDiario() async {
     final prefs = await _instance;
     return prefs.getInt(_keyObjetivoDiario) ?? 5;
+  }
+  // ---------------------------------------------------------------------------
+  //ADMIN
+  // ---------------------------------------------------------------------------
+
+  static const String _keyEsAdmin = 'es_admin';
+
+  static Future<void> setEsAdmin(bool esAdmin) async {
+    final prefs = await _instance;
+    await prefs.setBool(_keyEsAdmin, esAdmin);
+  }
+
+  static Future<bool> getEsAdmin() async {
+    final prefs = await _instance;
+    return prefs.getBool(_keyEsAdmin) ?? false;
   }
 
   // ---------------------------------------------------------------------------

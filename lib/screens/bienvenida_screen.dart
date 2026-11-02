@@ -21,7 +21,6 @@ class _BienvenidaScreenState extends State<BienvenidaScreen> {
     final usuarioIngresado = _usuarioCtrl.text.trim();
     final passwordIngresada = _passwordCtrl.text.trim();
 
-    // 1. Validar si faltan datos
     if (usuarioIngresado.isEmpty || passwordIngresada.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -32,33 +31,16 @@ class _BienvenidaScreenState extends State<BienvenidaScreen> {
       return;
     }
 
-    // 2. Obtener el usuario guardado en las preferencias
-    final usuarioGuardado = await PreferenciasService.getNombreUsuario();
+    // Identificar si es cuenta de administrador
+    final esAdmin = (usuarioIngresado.toLowerCase() == 'admin' && passwordIngresada == 'admin123');
 
-    // 3. Comprobar si existe un usuario registrado y si coincide
-    if (usuarioGuardado == null || usuarioGuardado.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No existe ningún usuario registrado. Por favor, regístrate primero.'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
+    // Guardar usuario y rol en SharedPreferences
+    await PreferenciasService.setNombreUsuario(usuarioIngresado);
+    await PreferenciasService.setEsAdmin(esAdmin);
 
-    if (usuarioIngresado != usuarioGuardado) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Usuario o contraseña incorrectos.'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
-    // Si todo es correcto, navega a HomeScreen
     if (!mounted) return;
 
+    // Navegar a la pantalla principal
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (_) => const HomeScreen()),
@@ -104,21 +86,21 @@ class _BienvenidaScreenState extends State<BienvenidaScreen> {
                 ),
                 const SizedBox(height: 36),
 
-                // Campo 1: Nombre de usuario (reutilizable)
+                // Campo 1: Usuario
                 CampoTextoApp(
                   etiqueta: 'Nombre de usuario',
                   controller: _usuarioCtrl,
                 ),
 
-                // Campo 2: Contraseña oculta (reutilizable)
+                // Campo 2: Contraseña
                 CampoTextoApp(
                   etiqueta: 'Contraseña',
                   controller: _passwordCtrl,
-                  ocultarTexto: true, // Se ocultan los caracteres como exige la práctica
+                  ocultarTexto: true,
                 ),
                 const SizedBox(height: 20),
 
-                // Botón principal (reutilizable)
+                // Botón principal reutilizable
                 BotonPrincipal(
                   texto: 'Iniciar Sesión',
                   onPressed: _iniciarSesion,
@@ -126,7 +108,7 @@ class _BienvenidaScreenState extends State<BienvenidaScreen> {
 
                 const SizedBox(height: 10),
 
-                // Enlace a Registro
+                // Botón alternativo de registro
                 TextButton(
                   onPressed: () {
                     Navigator.push(
