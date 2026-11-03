@@ -2,7 +2,7 @@ import 'dart:convert';
 
 class Habito {
   final int? id;
-  final int usuarioId; // Relación con el usuario creador
+  final int usuarioId;
   String nombre;
   int colorValue;
   List<String> fechasCompletado;
@@ -14,6 +14,8 @@ class Habito {
     required this.colorValue,
     List<String>? fechasCompletado,
   }) : fechasCompletado = fechasCompletado ?? [];
+
+
 
   int get rachaActual {
     if (fechasCompletado.isEmpty) return 0;
@@ -74,4 +76,8 @@ class Habito {
           : [],
     );
   }
+
+  Map<String, dynamic> toJson() => toMap();
+
+  factory Habito.fromJson(Map<String, dynamic> json) => Habito.fromMap(json);
 }

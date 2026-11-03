@@ -118,13 +118,9 @@ class DatabaseHelper {
 
   Future<List<Habito>> getHabitosPorUsuario(int usuarioId, String rol) async {
     final db = await instance.database;
-    List> res;
-
-    if (rol == 'administrador') {
-      res = await db.query('habitos'); // Admin ve todos
-    } else {
-      res = await db.query('habitos', where: 'usuario_id = ?', whereArgs: [usuarioId]);
-    }
+    final res = (rol == 'administrador')
+        ? await db.query('habitos')
+        : await db.query('habitos', where: 'usuario_id = ?', whereArgs: [usuarioId]);
 
     return res.map((e) => Habito.fromMap(e)).toList();
   }

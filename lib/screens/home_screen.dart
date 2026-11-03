@@ -157,7 +157,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => GestionHabitosScreen(habitosIniciales: _listaHabitos),
+                    builder: (_) => GestionHabitosScreen(
+                      habitosIniciales: _listaHabitos,
+                    ),
                   ),
                 ).then((_) => _cargarDatos());
               },

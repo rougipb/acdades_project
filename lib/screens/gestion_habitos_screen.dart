@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/habito.dart';
 import '../services/preferencias_service.dart';
+import '../services/database_helper.dart';
 import 'editar_habito_screen.dart';
 import '../widgets/tarjeta_habito.dart';
 
@@ -22,10 +23,6 @@ class _GestionHabitosScreenState extends State<GestionHabitosScreen> {
     _listaHabitos = List.from(widget.habitosIniciales);
   }
 
-  Future<void> _guardar() async {
-    await PreferenciasService.guardarHabitos(_listaHabitos);
-  }
-
   Future<void> _crearOEditarHabito([Habito? habitoExistente]) async {
     final res = await Navigator.push(
       context,
@@ -40,25 +37,44 @@ class _GestionHabitosScreenState extends State<GestionHabitosScreen> {
     if (!mounted || res == null) return;
 
     final resultado = res as Map<String, dynamic>;
+    final nombre = resultado['nombre'] as String;
+    final colorValue = resultado['colorValue'] as int;
 
-    setState(() {
-      if (habitoExistente != null) {
-        habitoExistente.nombre = resultado['nombre'] as String;
-        habitoExistente.colorValue = resultado['colorValue'] as int;
-      } else {
-        final nuevo = Habito(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          nombre: resultado['nombre'] as String,
-          colorValue: resultado['colorValue'] as int,
+    if (habitoExistente != null) {
+      // Editar hábito existente en la Base de Datos
+      setState(() {
+        habitoExistente.nombre = nombre;
+        habitoExistente.colorValue = colorValue;
+      });
+      await DatabaseHelper.instance.updateHabito(habitoExistente);
+    } else {
+      // Crear un nuevo hábito asignado al usuario actual logueado
+      final usuarioId = await PreferenciasService.getUsuarioId() ?? 1;
+
+      final nuevoHabito = Habito(
+        usuarioId: usuarioId,
+        nombre: nombre,
+        colorValue: colorValue,
+      );
+
+      final newId = await DatabaseHelper.instance.insertHabito(nuevoHabito);
+
+      setState(() {
+        _listaHabitos.add(
+          Habito(
+            id: newId,
+            usuarioId: usuarioId,
+            nombre: nombre,
+            colorValue: colorValue,
+          ),
         );
-        _listaHabitos.add(nuevo);
-      }
-    });
-
-    await _guardar();
+      });
+    }
   }
 
-  void _borrarHabito(String id) async {
+  void _borrarHabito(int? id) async {
+    if (id == null) return;
+
     final confirmar = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -78,10 +94,10 @@ class _GestionHabitosScreenState extends State<GestionHabitosScreen> {
     );
 
     if (confirmar == true) {
+      await DatabaseHelper.instance.deleteHabito(id);
       setState(() {
         _listaHabitos.removeWhere((h) => h.id == id);
       });
-      await _guardar();
     }
   }
 
@@ -114,7 +130,7 @@ class _GestionHabitosScreenState extends State<GestionHabitosScreen> {
                   h.fechasCompletado.add(hoy);
                 }
               });
-              await _guardar();
+              await DatabaseHelper.instance.updateHabito(h);
             },
             onEditar: () => _crearOEditarHabito(h),
             onEliminar: () => _borrarHabito(h.id),

@@ -145,9 +145,13 @@ class _AdministracionScreenState extends State<AdministracionScreen> {
                   nombre: h.nombre,
                   color: Color(h.colorValue),
                   completadoHoy: h.completadoHoy,
-                  onCompletar: () {}, // Deshabilitado o de solo lectura para admin
+                  onCompletar: () {},
                   onEditar: () {},
-                  onEliminar: () => _eliminarHabitoAdmin(h.id),
+                  onEliminar: () {
+                    if (h.id != null) {
+                      _eliminarHabitoAdmin(h.id.toString());
+                    }
+                  },
                 );
               },
             ),
