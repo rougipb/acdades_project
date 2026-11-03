@@ -58,7 +58,6 @@ class _HabitosAppState extends State<HabitosApp> {
       themeMode: _modoOscuro ? ThemeMode.dark : ThemeMode.light,
       theme: ThemeData.light(),
       darkTheme: ThemeData.dark(),
-      // Escalamos la letra globalmente mediante textScaler en lugar de apply()
       builder: (context, child) {
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(
