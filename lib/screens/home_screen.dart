@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/habito.dart';
 import '../services/preferencias_service.dart';
+import '../services/database_helper.dart';
 import '../widgets/boton_principal.dart';
 import '../widgets/tarjeta_habito.dart';
 import 'gestion_habitos_screen.dart';
@@ -17,10 +18,11 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   String _nombreUsuario = '';
+  int _usuarioId = 0;
+  String _rolUsuario = 'usuario';
   int _objetivoDiario = 5;
   List<Habito> _listaHabitos = [];
   bool _ocultarCompletados = false;
-  bool _esAdmin = false;
   bool _cargando = true;
 
   @override
@@ -30,24 +32,30 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _cargarDatos() async {
+    // 1. Obtener datos del usuario en sesión activa
     final nombre = await PreferenciasService.getNombreUsuario() ?? 'Usuario';
+    final usuarioId = await PreferenciasService.getUsuarioId() ?? 0;
+    final rol = await PreferenciasService.getRolUsuario() ?? 'usuario';
     final objetivo = await PreferenciasService.getObjetivoDiario();
-    final habitos = await PreferenciasService.getHabitos();
     final ocultar = await PreferenciasService.getOcultarCompletados();
-    final esAdmin = await PreferenciasService.getEsAdmin();
+
+    // 2. Cargar hábitos desde la Base de Datos SQLite
+    final habitosDB = await DatabaseHelper.instance.getHabitosPorUsuario(usuarioId, rol);
 
     setState(() {
       _nombreUsuario = nombre;
+      _usuarioId = usuarioId;
+      _rolUsuario = rol;
       _objetivoDiario = objetivo;
-      _listaHabitos = habitos;
+      _listaHabitos = habitosDB;
       _ocultarCompletados = ocultar;
-      _esAdmin = esAdmin;
       _cargando = false;
     });
   }
 
   void _completarHabito(Habito habito) async {
     final hoyStr = DateTime.now().toIso8601String().split('T')[0];
+
     setState(() {
       if (habito.completadoHoy) {
         habito.fechasCompletado.remove(hoyStr);
@@ -57,7 +65,9 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       }
     });
-    await PreferenciasService.guardarHabitos(_listaHabitos);
+
+    // Actualizar registro en SQLite
+    await DatabaseHelper.instance.updateHabito(habito);
   }
 
   @override
@@ -71,19 +81,20 @@ class _HomeScreenState extends State<HomeScreen> {
         ? _listaHabitos.where((h) => !h.completadoHoy).toList()
         : _listaHabitos;
 
+    final esAdmin = _rolUsuario == 'administrador';
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Mi Perfil'),
         actions: [
-          // Solo los administradores ven el acceso al panel de administración
-          if (_esAdmin)
+          if (esAdmin)
             IconButton(
               icon: const Icon(Icons.admin_panel_settings, color: Colors.amber),
               tooltip: 'Administración',
               onPressed: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const AdministracionScreen()),
-              ),
+              ).then((_) => _cargarDatos()),
             ),
           IconButton(
             icon: const Icon(Icons.bar_chart),
@@ -108,7 +119,6 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Tarjeta de Perfil de Usuario
             Card(
               elevation: 3,
               child: Padding(
@@ -129,6 +139,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(height: 4),
+                          Text('Rol: $_rolUsuario'),
                           Text('Objetivo diario: $_objetivoDiario hábitos'),
                           Text('Progreso de hoy: $completadosHoy de $_objetivoDiario'),
                         ],
@@ -140,7 +151,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 10),
 
-            // Botón principal reutilizable para abrir el gestor
             BotonPrincipal(
               texto: 'Abrir Gestor de Hábitos',
               onPressed: () {
@@ -161,7 +171,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 10),
 
-            // Lista de hábitos utilizando el componente TarjetaHabito
             Expanded(
               child: habitosVisibles.isEmpty
                   ? const Center(child: Text('No tienes hábitos registrados en tu perfil.'))
@@ -201,11 +210,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       );
 
-                      if (confirmar == true) {
-                        setState(() {
-                          _listaHabitos.removeWhere((item) => item.id == h.id);
-                        });
-                        await PreferenciasService.guardarHabitos(_listaHabitos);
+                      if (confirmar == true && h.id != null) {
+                        await DatabaseHelper.instance.deleteHabito(h.id!);
+                        _cargarDatos();
                       }
                     },
                   );

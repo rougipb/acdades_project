@@ -1,39 +1,47 @@
 class Usuario {
-  final String id;
-  final String nombreUsuario;
+  final int? id;
+  final String usuario;
+  final String nombre;
+  final String apellidos;
+  final String email;
   final String contrasena;
-  final bool esAdmin;
-  final DateTime fechaCreacion;
+  final String fechaCreacion;
+  final String rol; // 'administrador' o 'usuario'
 
   Usuario({
-    required this.id,
-    required this.nombreUsuario,
+    this.id,
+    required this.usuario,
+    required this.nombre,
+    required this.apellidos,
+    required this.email,
     required this.contrasena,
-    this.esAdmin = false,
-    DateTime? fechaCreacion,
-  }) : fechaCreacion = fechaCreacion ?? DateTime.now();
+    required this.fechaCreacion,
+    required this.rol,
+  });
 
-  // Convertir un objeto Usuario a un Map (para SQLite o SharedPreferences)
   Map<String, dynamic> toMap() {
     return {
       'id': id,
-      'nombreUsuario': nombreUsuario,
+      'usuario': usuario,
+      'nombre': nombre,
+      'apellidos': apellidos,
+      'email': email,
       'contrasena': contrasena,
-      'esAdmin': esAdmin ? 1 : 0,
-      'fechaCreacion': fechaCreacion.toIso8601String(),
+      'fecha_creacion': fechaCreacion,
+      'rol': rol,
     };
   }
 
-  // Crear un objeto Usuario a partir de un Map
   factory Usuario.fromMap(Map<String, dynamic> map) {
     return Usuario(
-      id: map['id'] ?? '',
-      nombreUsuario: map['nombreUsuario'] ?? '',
+      id: map['id'] as int?,
+      usuario: map['usuario'] ?? '',
+      nombre: map['nombre'] ?? '',
+      apellidos: map['apellidos'] ?? '',
+      email: map['email'] ?? '',
       contrasena: map['contrasena'] ?? '',
-      esAdmin: map['esAdmin'] == 1 || map['esAdmin'] == true,
-      fechaCreacion: map['fechaCreacion'] != null
-          ? DateTime.parse(map['fechaCreacion'])
-          : DateTime.now(),
+      fechaCreacion: map['fecha_creacion'] ?? '',
+      rol: map['rol'] ?? 'usuario',
     );
   }
 }

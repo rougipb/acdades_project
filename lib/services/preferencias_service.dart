@@ -26,6 +26,28 @@ class PreferenciasService {
 
 
 
+
+  static Future<void> setUsuarioId(int id) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('usuario_id', id);
+  }
+
+  static Future<int?> getUsuarioId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt('usuario_id');
+  }
+
+  static Future<void> setRolUsuario(String rol) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('rol_usuario', rol);
+  }
+
+  static Future<String?> getRolUsuario() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('rol_usuario');
+  }
+
+
   // ---------------------------------------------------------------------------
   // REGISTRO DE APERTURAS
   // ---------------------------------------------------------------------------

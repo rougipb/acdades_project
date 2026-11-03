@@ -1,18 +1,20 @@
+import 'dart:convert';
 
 class Habito {
-  final String id;
+  final int? id;
+  final int usuarioId; // Relación con el usuario creador
   String nombre;
-  int colorValue; // Guardamos el valor entero del color (ARGB)
-  List<String> fechasCompletado; // Formato "YYYY-MM-DD"
+  int colorValue;
+  List<String> fechasCompletado;
 
   Habito({
-    required this.id,
+    this.id,
+    required this.usuarioId,
     required this.nombre,
     required this.colorValue,
     List<String>? fechasCompletado,
   }) : fechasCompletado = fechasCompletado ?? [];
 
-  // Calcula la racha actual consecutiva de días completados
   int get rachaActual {
     if (fechasCompletado.isEmpty) return 0;
 
@@ -25,12 +27,11 @@ class Habito {
     int racha = 0;
     DateTime fechaEsperada = hoyNormalizado;
 
-    // Si no se ha completado hoy, comprobamos si se completó ayer para no romper la racha aún
     final ultimaFecha = DateTime(fechasOrdenadas.first.year, fechasOrdenadas.first.month, fechasOrdenadas.first.day);
     final diferenciaDias = hoyNormalizado.difference(ultimaFecha).inDays;
 
     if (diferenciaDias > 1) {
-      return 0; // Se rompió la racha
+      return 0;
     } else if (diferenciaDias == 1) {
       fechaEsperada = ultimaFecha;
     }
@@ -52,21 +53,25 @@ class Habito {
     return fechasCompletado.contains(hoyStr);
   }
 
-  Map<String, dynamic> toJson() {
+  Map<String, dynamic> toMap() {
     return {
       'id': id,
+      'usuario_id': usuarioId,
       'nombre': nombre,
-      'colorValue': colorValue,
-      'fechasCompletado': fechasCompletado,
+      'color_value': colorValue,
+      'fechas_completado': jsonEncode(fechasCompletado), // Convertimos la lista a String JSON
     };
   }
 
-  factory Habito.fromJson(Map<String, dynamic> json) {
+  factory Habito.fromMap(Map<String, dynamic> map) {
     return Habito(
-      id: json['id'] as String,
-      nombre: json['nombre'] as String,
-      colorValue: json['colorValue'] as int,
-      fechasCompletado: List<String>.from(json['fechasCompletado'] as List),
+      id: map['id'] as int?,
+      usuarioId: map['usuario_id'] as int,
+      nombre: map['nombre'] ?? '',
+      colorValue: map['color_value'] ?? 0,
+      fechasCompletado: map['fechas_completado'] != null
+          ? List<String>.from(jsonDecode(map['fechas_completado']))
+          : [],
     );
   }
 }
